@@ -34,6 +34,10 @@ do {
     // Create output directory
     try fm.createDirectory(atPath: outputPath, withIntermediateDirectories: true)
 
+    // Write CSS file to output
+    let cssFile = (outputPath as NSString).appendingPathComponent("style.css")
+    try templates.css.write(toFile: cssFile, atomically: true, encoding: .utf8)
+
     // Find markdown files
     let files = try fm.contentsOfDirectory(atPath: inputPath)
     let mdFiles = files.filter { $0.hasSuffix(".md") }.sorted()

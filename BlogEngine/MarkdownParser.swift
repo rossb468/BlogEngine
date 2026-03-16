@@ -238,7 +238,6 @@ func postPage(post: Post, templates: Templates, nav: String, config: SiteConfig)
     ])
     var values = config.values
     values["title"] = post.title
-    values["css"] = templates.css
     values["nav"] = nav
     values["content"] = content
     return render(templates.page, values)
@@ -253,7 +252,6 @@ func indexPage(posts: [Post], templates: Templates, nav: String, config: SiteCon
     let content = render(templates.index, ["post_list": listItems])
     var values = config.values
     values["title"] = "Home"
-    values["css"] = templates.css
     values["nav"] = nav
     values["content"] = content
     return render(templates.page, values)
@@ -262,7 +260,6 @@ func indexPage(posts: [Post], templates: Templates, nav: String, config: SiteCon
 func staticPage(page: Page, templates: Templates, nav: String, config: SiteConfig) -> String {
     var values = config.values
     values["title"] = page.title
-    values["css"] = templates.css
     values["nav"] = nav
     values["content"] = page.htmlContent
     return render(templates.page, values)
