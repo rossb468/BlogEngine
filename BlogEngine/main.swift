@@ -24,6 +24,10 @@ do {
         exit(1)
     }
 
+    // Load config
+    let configPath = (inputPath as NSString).appendingPathComponent("site.conf")
+    let config = try SiteConfig(file: configPath)
+
     // Load templates
     let templates = try Templates(directory: templatesPath)
 
@@ -74,7 +78,7 @@ do {
 
     // Write individual post pages
     for post in posts {
-        let html = postPage(post: post, templates: templates, nav: nav)
+        let html = postPage(post: post, templates: templates, nav: nav, config: config)
         let outFile = (outputPath as NSString).appendingPathComponent("\(post.slug).html")
         try html.write(toFile: outFile, atomically: true, encoding: .utf8)
         print("  Generated: \(post.slug).html")
@@ -82,14 +86,14 @@ do {
 
     // Write static pages
     for page in pages {
-        let html = staticPage(page: page, templates: templates, nav: nav)
+        let html = staticPage(page: page, templates: templates, nav: nav, config: config)
         let outFile = (outputPath as NSString).appendingPathComponent("\(page.slug).html")
         try html.write(toFile: outFile, atomically: true, encoding: .utf8)
         print("  Generated: \(page.slug).html")
     }
 
     // Write index page
-    let html = indexPage(posts: posts, templates: templates, nav: nav)
+    let html = indexPage(posts: posts, templates: templates, nav: nav, config: config)
     let indexFile = (outputPath as NSString).appendingPathComponent("index.html")
     try html.write(toFile: indexFile, atomically: true, encoding: .utf8)
     print("  Generated: index.html")

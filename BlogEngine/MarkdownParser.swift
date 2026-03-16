@@ -178,9 +178,32 @@ func buildNav(pages: [Page]) -> String {
     return links
 }
 
-// MARK: - Templates
+// MARK: - Config
 
-let siteTitle = "My Blog"
+struct SiteConfig {
+    let values: [String: String]
+
+    init(file: String) throws {
+        let content = try String(contentsOfFile: file, encoding: .utf8)
+        var dict: [String: String] = [:]
+        for line in content.components(separatedBy: .newlines) {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if trimmed.isEmpty || trimmed.hasPrefix("#") { continue }
+            if let eqIndex = trimmed.firstIndex(of: "=") {
+                let key = trimmed[trimmed.startIndex..<eqIndex].trimmingCharacters(in: .whitespaces)
+                let value = trimmed[trimmed.index(after: eqIndex)...].trimmingCharacters(in: .whitespaces)
+                dict[key] = value
+            }
+        }
+        values = dict
+    }
+
+    func get(_ key: String, default fallback: String = "") -> String {
+        values[key] ?? fallback
+    }
+}
+
+// MARK: - Templates
 
 struct Templates {
     let page: String
@@ -208,43 +231,40 @@ func render(_ template: String, _ values: [String: String]) -> String {
     return result
 }
 
-func postPage(post: Post, templates: Templates, nav: String) -> String {
+func postPage(post: Post, templates: Templates, nav: String, config: SiteConfig) -> String {
     let content = render(templates.post, [
         "date": post.date,
         "body": post.htmlContent
     ])
-    return render(templates.page, [
-        "title": post.title,
-        "site_title": siteTitle,
-        "css": templates.css,
-        "nav": nav,
-        "content": content
-    ])
+    var values = config.values
+    values["title"] = post.title
+    values["css"] = templates.css
+    values["nav"] = nav
+    values["content"] = content
+    return render(templates.page, values)
 }
 
-func indexPage(posts: [Post], templates: Templates, nav: String) -> String {
+func indexPage(posts: [Post], templates: Templates, nav: String, config: SiteConfig) -> String {
     var listItems = ""
     for post in posts {
         let datePart = post.date.isEmpty ? "" : "<span class=\"post-date\">\(post.date)</span>"
         listItems += "<li>\(datePart)<a href=\"\(post.slug).html\">\(post.title)</a></li>\n"
     }
     let content = render(templates.index, ["post_list": listItems])
-    return render(templates.page, [
-        "title": "Home",
-        "site_title": siteTitle,
-        "css": templates.css,
-        "nav": nav,
-        "content": content
-    ])
+    var values = config.values
+    values["title"] = "Home"
+    values["css"] = templates.css
+    values["nav"] = nav
+    values["content"] = content
+    return render(templates.page, values)
 }
 
-func staticPage(page: Page, templates: Templates, nav: String) -> String {
-    return render(templates.page, [
-        "title": page.title,
-        "site_title": siteTitle,
-        "css": templates.css,
-        "nav": nav,
-        "content": page.htmlContent
-    ])
+func staticPage(page: Page, templates: Templates, nav: String, config: SiteConfig) -> String {
+    var values = config.values
+    values["title"] = page.title
+    values["css"] = templates.css
+    values["nav"] = nav
+    values["content"] = page.htmlContent
+    return render(templates.page, values)
 }
 
