@@ -26,7 +26,16 @@ do {
 
     // Load config
     let configPath = (inputPath as NSString).appendingPathComponent("site.conf")
-    let config = try SiteConfig(file: configPath)
+    var config = try SiteConfig(file: configPath)
+
+    // Load header
+    let headerPath = (inputPath as NSString).appendingPathComponent("header.md")
+    if fm.fileExists(atPath: headerPath) {
+        let headerMd = try String(contentsOfFile: headerPath, encoding: .utf8)
+        config.values["header"] = parseMarkdown(headerMd)
+    } else {
+        config.values["header"] = "<h1>\(config.get("site_title", default: "My Blog"))</h1>"
+    }
 
     // Load templates
     let templates = try Templates(directory: templatesPath)
@@ -34,13 +43,18 @@ do {
     // Create output directory
     try fm.createDirectory(atPath: outputPath, withIntermediateDirectories: true)
 
-    // Write CSS file to output
-    let cssFile = (outputPath as NSString).appendingPathComponent("style.css")
-    try templates.css.write(toFile: cssFile, atomically: true, encoding: .utf8)
+    // Copy CSS file to output (prefer input/style.css, fall back to templates)
+    let inputCssPath = (inputPath as NSString).appendingPathComponent("style.css")
+    let outputCssPath = (outputPath as NSString).appendingPathComponent("style.css")
+    if fm.fileExists(atPath: inputCssPath) {
+        try fm.copyItem(atPath: inputCssPath, toPath: outputCssPath)
+    } else {
+        try templates.css.write(toFile: outputCssPath, atomically: true, encoding: .utf8)
+    }
 
     // Find markdown files
     let files = try fm.contentsOfDirectory(atPath: inputPath)
-    let mdFiles = files.filter { $0.hasSuffix(".md") }.sorted()
+    let mdFiles = files.filter { $0.hasSuffix(".md") && $0 != "header.md" }.sorted()
 
     if mdFiles.isEmpty {
         print("No .md files found in \(inputPath)")

@@ -181,7 +181,7 @@ func buildNav(pages: [Page]) -> String {
 // MARK: - Config
 
 struct SiteConfig {
-    let values: [String: String]
+    var values: [String: String]
 
     init(file: String) throws {
         let content = try String(contentsOfFile: file, encoding: .utf8)
