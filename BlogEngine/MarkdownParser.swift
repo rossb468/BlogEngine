@@ -168,14 +168,17 @@ func parsePage(filename: String, content: String) -> Page {
     return Page(title: title, slug: slug, htmlContent: htmlContent)
 }
 
-// MARK: - Navigation
+// MARK: - Contact Links
 
-func buildNav(pages: [Page]) -> String {
-    var links = "<a href=\"index.html\">Home</a>"
-    for page in pages {
-        links += " <a href=\"\(page.slug).html\">\(page.title)</a>"
+func buildContact(config: SiteConfig) -> String {
+    var links: [String] = []
+    if let github = config.values["github"], !github.isEmpty {
+        links.append("<a href=\"https://github.com/\(github)\">GitHub</a>")
     }
-    return links
+    if let email = config.values["email"], !email.isEmpty {
+        links.append("<a href=\"mailto:\(email)\">\(email)</a>")
+    }
+    return links.joined(separator: " ")
 }
 
 // MARK: - Config
@@ -231,36 +234,36 @@ func render(_ template: String, _ values: [String: String]) -> String {
     return result
 }
 
-func postPage(post: Post, templates: Templates, nav: String, config: SiteConfig) -> String {
+func postPage(post: Post, templates: Templates, contact: String, config: SiteConfig) -> String {
     let content = render(templates.post, [
         "date": post.date,
         "body": post.htmlContent
     ])
     var values = config.values
     values["title"] = post.title
-    values["nav"] = nav
+    values["contact"] = contact
     values["content"] = content
     return render(templates.page, values)
 }
 
-func indexPage(posts: [Post], templates: Templates, nav: String, config: SiteConfig) -> String {
+func indexPage(posts: [Post], templates: Templates, contact: String, config: SiteConfig, intro: String = "") -> String {
     var listItems = ""
     for post in posts {
         let datePart = post.date.isEmpty ? "" : "<span class=\"post-date\">\(post.date)</span>"
         listItems += "<li>\(datePart)<a href=\"\(post.slug).html\">\(post.title)</a></li>\n"
     }
-    let content = render(templates.index, ["post_list": listItems])
+    let content = render(templates.index, ["post_list": listItems, "intro": intro])
     var values = config.values
     values["title"] = "Home"
-    values["nav"] = nav
+    values["contact"] = contact
     values["content"] = content
     return render(templates.page, values)
 }
 
-func staticPage(page: Page, templates: Templates, nav: String, config: SiteConfig) -> String {
+func staticPage(page: Page, templates: Templates, contact: String, config: SiteConfig) -> String {
     var values = config.values
     values["title"] = page.title
-    values["nav"] = nav
+    values["contact"] = contact
     values["content"] = page.htmlContent
     return render(templates.page, values)
 }

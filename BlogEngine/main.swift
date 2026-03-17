@@ -37,6 +37,23 @@ do {
         config.values["header"] = "<h1>\(config.get("site_title", default: "My Blog"))</h1>"
     }
 
+    // Load achievements — split by ### headings into columns
+    let achievementsPath = (inputPath as NSString).appendingPathComponent("achievements.md")
+    if fm.fileExists(atPath: achievementsPath) {
+        let achievementsMd = try String(contentsOfFile: achievementsPath, encoding: .utf8)
+        let sections = achievementsMd.components(separatedBy: "\n### ")
+        var columns = ""
+        for section in sections {
+            let trimmed = section.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmed.isEmpty { continue }
+            let md = trimmed.hasPrefix("### ") ? trimmed : "### " + trimmed
+            columns += "<div class=\"achievement-col\">" + parseMarkdown(md) + "</div>"
+        }
+        config.values["achievements"] = "<div class=\"achievements\">" + columns + "</div>"
+    } else {
+        config.values["achievements"] = ""
+    }
+
     // Load templates
     let templates = try Templates(directory: templatesPath)
 
@@ -54,7 +71,8 @@ do {
 
     // Find markdown files
     let files = try fm.contentsOfDirectory(atPath: inputPath)
-    let mdFiles = files.filter { $0.hasSuffix(".md") && $0 != "header.md" }.sorted()
+    let reserved: Set<String> = ["header.md", "intro.md", "achievements.md"]
+    let mdFiles = files.filter { $0.hasSuffix(".md") && !reserved.contains($0) }.sorted()
 
     if mdFiles.isEmpty {
         print("No .md files found in \(inputPath)")
@@ -92,11 +110,11 @@ do {
         }
     }
 
-    let nav = buildNav(pages: pages)
+    let contact = buildContact(config: config)
 
     // Write individual post pages
     for post in posts {
-        let html = postPage(post: post, templates: templates, nav: nav, config: config)
+        let html = postPage(post: post, templates: templates, contact: contact, config: config)
         let outFile = (outputPath as NSString).appendingPathComponent("\(post.slug).html")
         try html.write(toFile: outFile, atomically: true, encoding: .utf8)
         print("  Generated: \(post.slug).html")
@@ -104,14 +122,22 @@ do {
 
     // Write static pages
     for page in pages {
-        let html = staticPage(page: page, templates: templates, nav: nav, config: config)
+        let html = staticPage(page: page, templates: templates, contact: contact, config: config)
         let outFile = (outputPath as NSString).appendingPathComponent("\(page.slug).html")
         try html.write(toFile: outFile, atomically: true, encoding: .utf8)
         print("  Generated: \(page.slug).html")
     }
 
+    // Load intro for index page
+    var intro = ""
+    let introPath = (inputPath as NSString).appendingPathComponent("intro.md")
+    if fm.fileExists(atPath: introPath) {
+        let introMd = try String(contentsOfFile: introPath, encoding: .utf8)
+        intro = parseMarkdown(introMd)
+    }
+
     // Write index page
-    let html = indexPage(posts: posts, templates: templates, nav: nav, config: config)
+    let html = indexPage(posts: posts, templates: templates, contact: contact, config: config, intro: intro)
     let indexFile = (outputPath as NSString).appendingPathComponent("index.html")
     try html.write(toFile: indexFile, atomically: true, encoding: .utf8)
     print("  Generated: index.html")
