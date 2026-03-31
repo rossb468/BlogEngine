@@ -1,19 +1,9 @@
 # Swift Concurrency in Practice
 
-Swift's `async/await` syntax makes writing concurrent code much simpler. Let's look at a quick example:
+Swift's structured concurrency model, introduced with `async/await` in Swift 5.5, fundamentally changed how we write asynchronous code. Gone are the days of deeply nested completion handlers and callback pyramids. With async/await, asynchronous code reads almost exactly like synchronous code, making it easier to reason about control flow, handle errors, and avoid subtle bugs.
 
-```
-func fetchData() async throws -> Data {
-    let url = URL(string: "https://example.com/api")!
-    let (data, _) = try await URLSession.shared.data(from: url)
-    return data
-}
-```
+![Concurrent tasks running in parallel](https://picsum.photos/seed/concurrency/800/400)
 
-## Key Concepts
+The model goes beyond simple async functions. **Actors** provide data-race safety by isolating mutable state, ensuring that only one task accesses an actor's properties at a time. **Task groups** let you spawn dynamic numbers of concurrent child tasks and collect their results, which is perfect for scenarios like fetching multiple API endpoints in parallel. And the `Sendable` protocol helps the compiler verify that data shared across concurrency boundaries is safe to transfer.
 
-1. Mark functions with `async` if they perform asynchronous work
-2. Use `await` when calling async functions
-3. Use `Task` to bridge sync and async code
-
-For more details, check the [Swift documentation](https://docs.swift.org/swift-book/documentation/the-swift-programming-language/concurrency/).
+In practice, adopting Swift concurrency means rethinking how you structure network layers and data pipelines. A common pattern is to define your service interfaces with async methods, use actors for shared caches or state managers, and rely on `TaskGroup` for fan-out operations. The transition from GCD and completion handlers takes effort, but the payoff in code clarity and safety is substantial. Apple's own frameworks -- from *SwiftUI* to *SwiftData* -- are increasingly built around these concurrency primitives.

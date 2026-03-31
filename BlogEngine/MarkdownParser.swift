@@ -29,6 +29,8 @@ func parseInline(_ text: String) -> String {
     result = result.replacingOccurrences(of: "\\*\\*(.+?)\\*\\*", with: "<strong>$1</strong>", options: .regularExpression)
     // Italic
     result = result.replacingOccurrences(of: "\\*(.+?)\\*", with: "<em>$1</em>", options: .regularExpression)
+    // Images (must come before links)
+    result = result.replacingOccurrences(of: "!\\[([^\\]]*?)\\]\\(([^)]+)\\)", with: "<img src=\"$2\" alt=\"$1\">", options: .regularExpression)
     // Links
     result = result.replacingOccurrences(of: "\\[([^\\]]+)\\]\\(([^)]+)\\)", with: "<a href=\"$2\">$1</a>", options: .regularExpression)
     return result
@@ -247,12 +249,16 @@ func postPage(post: Post, templates: Templates, contact: String, config: SiteCon
 }
 
 func indexPage(posts: [Post], templates: Templates, contact: String, config: SiteConfig, intro: String = "") -> String {
-    var listItems = ""
+    var postEntries = ""
     for post in posts {
-        let datePart = post.date.isEmpty ? "" : "<span class=\"post-date\">\(post.date)</span>"
-        listItems += "<li>\(datePart)<a href=\"\(post.slug).html\">\(post.title)</a></li>\n"
+        let datePart = post.date.isEmpty ? "" : "<p class=\"post-date\">\(post.date)</p>"
+        postEntries += "<article class=\"post-entry\">\n"
+        postEntries += datePart + "\n"
+        postEntries += post.htmlContent + "\n"
+        postEntries += "<a href=\"\(post.slug).html\" class=\"read-more\">Read more &rarr;</a>\n"
+        postEntries += "</article>\n"
     }
-    let content = render(templates.index, ["post_list": listItems, "intro": intro])
+    let content = render(templates.index, ["post_list": postEntries, "intro": intro])
     var values = config.values
     values["title"] = "Home"
     values["contact"] = contact

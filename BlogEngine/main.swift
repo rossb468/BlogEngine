@@ -69,6 +69,15 @@ do {
         try templates.css.write(toFile: outputCssPath, atomically: true, encoding: .utf8)
     }
 
+    // Copy images directory to output if it exists
+    let inputImagesPath = (inputPath as NSString).appendingPathComponent("images")
+    let outputImagesPath = (outputPath as NSString).appendingPathComponent("images")
+    var imagesIsDir: ObjCBool = false
+    if fm.fileExists(atPath: inputImagesPath, isDirectory: &imagesIsDir), imagesIsDir.boolValue {
+        try fm.copyItem(atPath: inputImagesPath, toPath: outputImagesPath)
+        print("  Copied images/ directory")
+    }
+
     // Find markdown files
     let files = try fm.contentsOfDirectory(atPath: inputPath)
     let reserved: Set<String> = ["header.md", "intro.md", "achievements.md"]
