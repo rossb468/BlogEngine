@@ -57,15 +57,3 @@ public struct SiteConfig {
     }
 }
 
-// MARK: - Contact Links
-
-public func buildContact(config: SiteConfig) -> String {
-    var links: [String] = []
-    if let github = config.values["github"], !github.isEmpty {
-        links.append("<a href=\"https://github.com/\(github)\">GitHub</a>")
-    }
-    if let email = config.values["email"], !email.isEmpty {
-        links.append("<a href=\"mailto:\(email)\">\(email)</a>")
-    }
-    return links.joined(separator: " ")
-}

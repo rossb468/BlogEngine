@@ -7,7 +7,6 @@ public struct Templates {
     public let post: String
     public let index: String
     public let css: String
-
     public init(directory: String) throws {
         func load(_ name: String) throws -> String {
             let path = (directory as NSString).appendingPathComponent(name)
@@ -22,48 +21,48 @@ public struct Templates {
 
 // MARK: - Rendering
 
-public func render(_ template: String, _ values: [String: String]) -> String {
+public func render(_ template: String, _ values: [String: String], inputPath: String? = nil) -> String {
     var result = template
+
+    // Resolve {{*.md}} placeholders by loading and parsing markdown files from inputPath
+    if let inputPath = inputPath {
+        let pattern = try! NSRegularExpression(pattern: "\\{\\{([^}]+\\.md)\\}\\}")
+        let matches = pattern.matches(in: result, range: NSRange(result.startIndex..., in: result))
+        for match in matches.reversed() {
+            guard let range = Range(match.range(at: 1), in: result) else { continue }
+            let filename = String(result[range])
+            let filePath = (inputPath as NSString).appendingPathComponent(filename)
+            var html = ""
+            if let content = try? String(contentsOfFile: filePath, encoding: .utf8) {
+                html = parseMarkdown(content)
+            }
+            result = result.replacingOccurrences(of: "{{\(filename)}}", with: html)
+        }
+    }
+
+    // Replace remaining placeholders from the values dictionary
     for (key, value) in values {
         result = result.replacingOccurrences(of: "{{\(key)}}", with: value)
     }
     return result
 }
 
-public func postPage(post: Post, templates: Templates, contact: String, config: SiteConfig) -> String {
-    let content = render(templates.post, [
-        "date": post.date,
-        "body": post.htmlContent
-    ])
-    var values = config.values
-    values["title"] = post.title
-    values["contact"] = contact
-    values["content"] = content
-    return render(templates.page, values)
+public func postPage(post: Post, templates: Templates) -> String {
+    return render(templates.page, ["content": post.htmlContent])
 }
 
-public func indexPage(posts: [Post], templates: Templates, contact: String, config: SiteConfig, intro: String = "") -> String {
+public func indexPage(posts: [Post], templates: Templates) -> String {
     var postEntries = ""
     for post in posts {
-        let datePart = post.date.isEmpty ? "" : "<p class=\"post-date\">\(post.date)</p>"
-        postEntries += "<article class=\"post-entry\">\n"
-        postEntries += datePart + "\n"
-        postEntries += post.htmlContent + "\n"
-        postEntries += "<a href=\"\(post.slug).html\" class=\"read-more\">Read more &rarr;</a>\n"
-        postEntries += "</article>\n"
+        postEntries += render(templates.post, [
+            "body": post.htmlContent,
+            "slug": post.slug
+        ])
     }
-    let content = render(templates.index, ["post_list": postEntries, "intro": intro])
-    var values = config.values
-    values["title"] = "Home"
-    values["contact"] = contact
-    values["content"] = content
-    return render(templates.page, values)
+    let content = render(templates.index, ["post_list": postEntries])
+    return render(templates.page, ["content": content])
 }
 
-public func staticPage(page: Page, templates: Templates, contact: String, config: SiteConfig) -> String {
-    var values = config.values
-    values["title"] = page.title
-    values["contact"] = contact
-    values["content"] = page.htmlContent
-    return render(templates.page, values)
+public func staticPage(page: Page, templates: Templates) -> String {
+    return render(templates.page, ["content": page.htmlContent])
 }

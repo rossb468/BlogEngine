@@ -54,33 +54,7 @@ public class SiteBuilder {
         } else {
             throw BuildError.noConfigFound
         }
-        var config = try SiteConfig(file: configPath)
-
-        // Load header
-        let headerPath = (inputPath as NSString).appendingPathComponent("header.md")
-        if fm.fileExists(atPath: headerPath) {
-            let headerMd = try String(contentsOfFile: headerPath, encoding: .utf8)
-            config.values["header"] = parseMarkdown(headerMd)
-        } else {
-            config.values["header"] = "<h1>\(config.get("site_title", default: "My Blog"))</h1>"
-        }
-
-        // Load achievements — split by ### headings into columns
-        let achievementsPath = (inputPath as NSString).appendingPathComponent("achievements.md")
-        if fm.fileExists(atPath: achievementsPath) {
-            let achievementsMd = try String(contentsOfFile: achievementsPath, encoding: .utf8)
-            let sections = achievementsMd.components(separatedBy: "\n### ")
-            var columns = ""
-            for section in sections {
-                let trimmed = section.trimmingCharacters(in: .whitespacesAndNewlines)
-                if trimmed.isEmpty { continue }
-                let md = trimmed.hasPrefix("### ") ? trimmed : "### " + trimmed
-                columns += "<div class=\"achievement-col\">" + parseMarkdown(md) + "</div>"
-            }
-            config.values["achievements"] = "<div class=\"achievements\">" + columns + "</div>"
-        } else {
-            config.values["achievements"] = ""
-        }
+        _ = try SiteConfig(file: configPath)
 
         // Load templates
         let templates = try Templates(directory: templatesPath)
@@ -115,20 +89,26 @@ public class SiteBuilder {
             log("Copied images/ directory")
         }
 
-        // Discover and parse posts
-        let reserved: Set<String> = ["header.md", "intro.md", "achievements.md"]
-        let allFiles = try fm.contentsOfDirectory(atPath: inputPath)
-        let mdFiles = allFiles.filter { $0.hasSuffix(".md") && !reserved.contains($0) }.sorted()
-
-        if mdFiles.isEmpty {
-            log("Warning: No .md files found in \(inputPath)")
-        }
-
+        // Discover and parse posts from Posts/ directory (case-insensitive)
         var posts: [Post] = []
-        for filename in mdFiles {
-            let filePath = (inputPath as NSString).appendingPathComponent(filename)
-            let content = try String(contentsOfFile: filePath, encoding: .utf8)
-            posts.append(parsePost(filename: filename, content: content))
+        let inputContents = try fm.contentsOfDirectory(atPath: inputPath)
+        let postsDir = inputContents.first { $0.lowercased() == "posts" }
+        if let postsDir = postsDir {
+            let postsDirPath = (inputPath as NSString).appendingPathComponent(postsDir)
+            var postsIsDir: ObjCBool = false
+            if fm.fileExists(atPath: postsDirPath, isDirectory: &postsIsDir), postsIsDir.boolValue {
+                let mdFiles = try fm.contentsOfDirectory(atPath: postsDirPath)
+                    .filter { $0.hasSuffix(".md") }
+                    .sorted()
+                for filename in mdFiles {
+                    let filePath = (postsDirPath as NSString).appendingPathComponent(filename)
+                    let content = try String(contentsOfFile: filePath, encoding: .utf8)
+                    posts.append(parsePost(filename: filename, content: content))
+                }
+                log("Found \(posts.count) post(s) in \(postsDir)/")
+            }
+        } else {
+            log("Warning: No Posts directory found in \(inputPath)")
         }
 
         // Sort by date descending, then slug ascending
@@ -152,11 +132,9 @@ public class SiteBuilder {
             }
         }
 
-        let contact = buildContact(config: config)
-
         // Render individual post pages
         for post in posts {
-            let html = postPage(post: post, templates: templates, contact: contact, config: config)
+            let html = postPage(post: post, templates: templates)
             let outFile = (outputPath as NSString).appendingPathComponent("\(post.slug).html")
             try html.write(toFile: outFile, atomically: true, encoding: .utf8)
             log("Generated: \(post.slug).html")
@@ -164,21 +142,14 @@ public class SiteBuilder {
 
         // Render static pages
         for page in pages {
-            let html = staticPage(page: page, templates: templates, contact: contact, config: config)
+            let html = staticPage(page: page, templates: templates)
             let outFile = (outputPath as NSString).appendingPathComponent("\(page.slug).html")
             try html.write(toFile: outFile, atomically: true, encoding: .utf8)
             log("Generated: \(page.slug).html")
         }
 
-        // Load intro and render index page
-        var intro = ""
-        let introPath = (inputPath as NSString).appendingPathComponent("intro.md")
-        if fm.fileExists(atPath: introPath) {
-            let introMd = try String(contentsOfFile: introPath, encoding: .utf8)
-            intro = parseMarkdown(introMd)
-        }
-
-        let html = indexPage(posts: posts, templates: templates, contact: contact, config: config, intro: intro)
+        // Render index page
+        let html = indexPage(posts: posts, templates: templates)
         let indexFile = (outputPath as NSString).appendingPathComponent("index.html")
         try html.write(toFile: indexFile, atomically: true, encoding: .utf8)
         log("Generated: index.html")

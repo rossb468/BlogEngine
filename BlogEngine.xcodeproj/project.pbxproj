@@ -504,7 +504,6 @@
 			productName = BlogEngineCore;
 		};
 /* End XCSwiftPackageProductDependency section */
-
 	};
 	rootObject = AA0000000000000000000001 /* Project object */;
 }
