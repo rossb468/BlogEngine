@@ -132,9 +132,12 @@ public class SiteBuilder {
             }
         }
 
+        // Build navigation links from pages
+        let navLinks = pages.map { render(templates.navLink, ["slug": $0.slug, "title": $0.title]) }.joined()
+
         // Render individual post pages
         for post in posts {
-            let html = postPage(post: post, templates: templates)
+            let html = postPage(post: post, templates: templates, navLinks: navLinks)
             let outFile = (outputPath as NSString).appendingPathComponent("\(post.slug).html")
             try html.write(toFile: outFile, atomically: true, encoding: .utf8)
             log("Generated: \(post.slug).html")
@@ -142,14 +145,14 @@ public class SiteBuilder {
 
         // Render static pages
         for page in pages {
-            let html = staticPage(page: page, templates: templates)
+            let html = staticPage(page: page, templates: templates, navLinks: navLinks)
             let outFile = (outputPath as NSString).appendingPathComponent("\(page.slug).html")
             try html.write(toFile: outFile, atomically: true, encoding: .utf8)
             log("Generated: \(page.slug).html")
         }
 
         // Render index page
-        let html = indexPage(posts: posts, templates: templates)
+        let html = indexPage(posts: posts, templates: templates, navLinks: navLinks)
         let indexFile = (outputPath as NSString).appendingPathComponent("index.html")
         try html.write(toFile: indexFile, atomically: true, encoding: .utf8)
         log("Generated: index.html")

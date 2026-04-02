@@ -7,6 +7,7 @@ public struct Templates {
     public let post: String
     public let index: String
     public let css: String
+    public let navLink: String
     public init(directory: String) throws {
         func load(_ name: String) throws -> String {
             let path = (directory as NSString).appendingPathComponent(name)
@@ -16,6 +17,7 @@ public struct Templates {
         post = try load("post.html")
         index = try load("index.html")
         css = try load("style.css")
+        navLink = try load("nav_link.html")
     }
 }
 
@@ -47,11 +49,11 @@ public func render(_ template: String, _ values: [String: String], inputPath: St
     return result
 }
 
-public func postPage(post: Post, templates: Templates) -> String {
-    return render(templates.page, ["content": post.htmlContent])
+public func postPage(post: Post, templates: Templates, navLinks: String) -> String {
+    return render(templates.page, ["content": post.htmlContent, "nav_links": navLinks])
 }
 
-public func indexPage(posts: [Post], templates: Templates) -> String {
+public func indexPage(posts: [Post], templates: Templates, navLinks: String) -> String {
     var postEntries = ""
     for post in posts {
         postEntries += render(templates.post, [
@@ -60,9 +62,9 @@ public func indexPage(posts: [Post], templates: Templates) -> String {
         ])
     }
     let content = render(templates.index, ["post_list": postEntries])
-    return render(templates.page, ["content": content])
+    return render(templates.page, ["content": content, "nav_links": navLinks])
 }
 
-public func staticPage(page: Page, templates: Templates) -> String {
-    return render(templates.page, ["content": page.htmlContent])
+public func staticPage(page: Page, templates: Templates, navLinks: String) -> String {
+    return render(templates.page, ["content": page.htmlContent, "nav_links": navLinks])
 }
